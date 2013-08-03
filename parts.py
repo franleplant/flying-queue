@@ -3,30 +3,33 @@ import random
 
 
 def avg(list):
-	return sum(list) / float(len(list))
+	if len(  list  ) > 0:
+		return sum(list) / float(len(list))
+	return 0
 
 
 
 class Client():
 
+	client_id = 100
+
 	def __init__(self, t0):
 		'''
 			t0: arrival time
-			wq: waiting time in the queue
-			wc: waiting time in the server
+			tq: time it leaves the queue
+			ts: time it leaves the server and the system
 
 		'''
 		self.t0 = t0
-		self.wq = 0
-		self.wc = 0
+		self.tq = 0
+		self.ts = 0
+		self.id = self.__class__.client_id
+		self.__class__.client_id += 1
+		
 
 
 
 class System():
-
-	# System length
-	ls = []
-	client = []
 
 	def __init__(self, arrive_distribution, serve_distribution, T, dt):
 		'''
@@ -36,14 +39,17 @@ class System():
 			dt: delta of time, time step, in seconds
 
 		'''
+		# System length
+		self.ls = []
 		self.T = T
 		self.dt = dt
 		# be sure it is an integer
 		self.step_quantity = round(  self.T / self.dt  )
 		self.parts = {  
-						'source': 	Source(arrive_distribution, self.T, self.dt, self),  
+						'source': 	Source(arrive_distribution, self, self.step_quantity),  
 						'queue': 	Queue(self), 
-						'server': 	Server(serve_distribution, self.T, self.dt, self)  
+						'server': 	Server(serve_distribution, self, self.step_quantity),
+						'muestra':  Muestra(self)  
 					}
 
 
@@ -57,59 +63,23 @@ class System():
 	def get_source(self):
 		return self.parts['source']
 
+	def get_muestra(self):
+		return self.parts['muestra']
 
-	def calc_inner_state(self, ti):
-		# order is important
-		self.get_server().calc_inner_state(ti)
-		self.get_queue().calc_inner_state(ti)		
-		self.get_source().calc_inner_state(ti)	
-		
-
-
-
-
-	def main_loop(self):
-		for ti in range(self.step_quantity):
-			self.calc_inner_state(ti)
-			self.ls.append(self.get_queue().lq[-1] + self.get_server().cm[-1])
-
-	#	print('ls:', self.ls)
-	#	print('arrival times', self.get_source().time)
-		print('Clients:', [(c.t0, c.wq, c.wq + c.wc) for c in self.client])
-		print('Time:   ', [t for t in range(self.step_quantity)])
-		print('Queue:  ', self.get_queue().lq)
-		print('Server: ', self.get_server().cm)
-		print('System: ', self.ls)
-		
-		#print('ls:', len(self.ls))
-		#print('arrival times', len(self.get_source().time))
-
-
-	def wq_mean(self):
-		return avg(  [c.wq for c in self.client]  ) 
-
-	def ws_mean(self):
-		return avg(  [c.wq + c.wc for c in self.client]  )
-
-
-		
-
+	def calc_parameters(self):
+		self.ls.append(  self.get_queue().lq[-1] + self.get_server().cm[-1]  )
+	
+	def ls_mean(self):
+		return avg(  self.ls  )
 
 	def end_rutine(self):
 		return { 
 			'Lq_mean': self.get_queue().lq_mean(),
-			'Ls_mean': avg(self.ls),			
-			'Wq_mean': self.wq_mean(), 
-			'Ws_mean': self.ws_mean(),
+			'Ls_mean': self.ls_mean(),			
+			'Wq_mean': self.get_muestra().wq_mean(), 
+			'Ws_mean': self.get_muestra().ws_mean(),
 			'Cm_mean': self.get_server().cm_mean()
 			}
-
-
-
-	def client_leaves(self, client):
-		self.client.append(client)
-
-
 
 	def run_simulation(self):
 		self.main_loop()
@@ -117,66 +87,75 @@ class System():
 
 
 
+	def main_loop(self):
+
+		for ti in range(  self.step_quantity  ):
+			
+			self.get_muestra().input(ti)
+			self.get_queue().input(ti)
+			self.get_server().input(ti)
+			
+
+			self.get_queue().calc_parameters()
+			self.get_server().calc_parameters()
+			self.calc_parameters()
+
+
+			
+
+	def debug_on(self):
+		print(
+			ti,
+			"queue: ",[ c.id for c in self.get_queue().queue  ],
+			"server: ",[ c.id for c in self.get_server().client  ],
+			"muestra: ",[ c.id for c in self.get_muestra().element  ]
+			)
+
+
+
 
 
 
 class Queue():
-
-	queue = []
-	lq = []
-
 	def __init__(self, system):
 		self.system = system
+		self.queue = []
+		self.lq = []
 
+
+	def input(self, ti):
+		new_client = self.system.get_source().output(ti)
+		#print("queue: source output:", ti, new_client)
+		if isinstance(new_client, Client):
+			self.queue.append(new_client)
+
+
+	def output(self, ti):
+		return self.get_client(ti)
+
+	# FIFO discipline
+	def get_client(self, ti):
+		if len(  self.queue  ) > 0:
+			client = self.queue.pop(0)			
+			client.tq = ti
+			return client 
+
+		return "queue empty"
+
+	def calc_parameters(self):
+		self.lq.append(  len(self.queue)  )
 
 	def lq_mean(self):
-		#print(self.lq)
 		return avg(  self.lq  )
 
-		
 
-
-	# FIFO behavior
-	def try_get_service(self):
-		if len(self.queue) > 0 :
-			first_client = self.queue[0]
-			if self.system.get_server().try_get_service(first_client):
-				self.queue.remove(first_client)
-
-	def calc_clients_wq(self):
-		for client in self.queue:
-			client.wq += 1
-
-
-	def calc_inner_state(self, ti):		
-		self.try_get_service()
-
-		self.lq.append(  len(self.queue)  )
-		self.calc_clients_wq()
-
-
-	def new_arrive(self, client):
-		self.queue.append(client)
 
 
 
 
 class Random_wrapper():
 
-
-	def __init__(self, distribution, T, dt, system):
-		self.system = system
-		self.dt = dt
-		self.T = T
-		self.build_distribution(distribution, T)
-		self.initial_tasks()
-
-	def get_random(self):
-
-		return round( self.interval * random.random() + self.a  )  
-
-
-	def build_distribution(self, distribution, T):
+	def define_distribution(self, distribution):
 		'''
 			a, b, T: are time in seconds,  must be integers at all times
 
@@ -185,85 +164,125 @@ class Random_wrapper():
 		self.b = distribution[1]
 		self.interval = self.b - self.a
 
-	def initial_tasks(self):
+	def define_time_list(self, steps):
+		for i in range(steps):
+			self.time.append(  self.get_random()  )
+
+	def get_random(self):
+		return round( self.interval * random.random() + self.a  )  
+
+	def output(self, ti):
+		if self.is_client_ready(ti):
+			return self.client.pop(0)
+		else:
+			return "no client"
+
+	def is_client_ready(self, ti):
 		pass
+
 
 
 
 
 class Source(Random_wrapper):
 
-	def initial_tasks(self):
-		self.build_time_list()
 
+	def __init__(self, distribution, system, steps):
+		self.client = []
+		self.time = []
+		self.system = system
 
-	def build_time_list(self):
-		self.time = [self.get_random()]
+		self.define_distribution(distribution)
+		self.define_time_list(steps)
 
-
-		while self.time[-1] < self.T:
-			new_value = self.time[-1] + self.get_random()
-			self.time.append(new_value)
-
-
-	def deliver_client(self, ti):
-		client = Client(ti)
-		self.system.get_queue().new_arrive(client)	
-
-
-	def calc_inner_state(self, ti):
-		self.is_client_arriving(ti)
-
-
-	def is_client_arriving(self, ti):
+	def is_client_ready(self, ti):
 		if ti == self.time[0]:
-			self.time.remove(ti)
-			self.deliver_client(ti)
+			new_client = Client(ti)
+			self.client.append(new_client)
+
+			last_time = self.time.pop()
+			self.time[0] += last_time
+			#print(self.client)
+
+			return True
+
+
+		return False
+
+
 			
 
 
 class Server(Random_wrapper):
 
-	client = []
-	client_arrival_time = 0
-	current_time = 0
-	cm = []
+	def __init__(self, distribution, system, steps):
+		self.client = []
+		self.time = []
+		self.system = system
 
+		self.cm = []
 
-	def deliver_client(self):
-		client = self.client.pop()
-		self.system.client_leaves(client)
-
-	def calc_inner_state(self, ti):
-		self.current_time = ti
-
-		if len(  self.client  ) == 1:
-			self.cm.append(1)
-			self.is_client_done(ti)
-
-		else:
-
-			self.cm.append(0)
-
-
-	def is_client_done(self, ti):
-		if ti == self.client_arrival_time + self.client[0].wc :
-			self.deliver_client()
-			self.client_arrival_time = 0
-
-
-	def try_get_service(self, client):
-		if len(self.client) == 0:
-			self.client.append(  client  )
-			self.client[0].wc = self.get_random()
-			self.client_arrival_time = self.current_time
-			return True
-
-		return False
+		self.define_distribution(distribution)
+		self.define_time_list(steps)
+		
 
 
 	def cm_mean(self):
 		return avg(self.cm)
+
+	def is_client_ready(self, ti):
+		if self.is_busy() and self.client_has_finished(ti):
+			return True
+
+		return False
+
+	def input(self, ti):
+		if not self.is_busy():
+			new_client = self.system.get_queue().output(ti)
+			if isinstance(  new_client, Client  ):
+				new_client.ts = new_client.tq + self.time.pop(0)
+				self.client.append(new_client)
+
+
+	def is_busy(self):
+		return len(  self.client  ) > 0
+
+	def client_has_finished(self, ti):
+		return ti == self.client[0].ts
+
+	def calc_parameters(self):	
+		self.cm.append(  int(  self.is_busy()  )  )
+
+	def cm_mean(self):
+		return avg(  self.cm  )
+
+
+
+
+
+class Muestra():
+
+	def __init__(self, system):
+		self.system = system
+		self.element = []
+
+	def input(self, ti):
+		new_element = self.system.get_server().output(ti)
+		
+		if isinstance(new_element, Client):
+			self.element.append(new_element)
+			#print("asdasd", self.element)
+
+	def wq_mean(self):
+		return avg(  [e.tq - e.t0 for e in self.element ]  )
+
+	def ws_mean(self):
+		return avg(  [e.ts - e.t0 for e in self.element ]  )
+
+
+
+
+
 
 
 

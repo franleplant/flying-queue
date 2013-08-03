@@ -1,6 +1,6 @@
 import parts
 
-sys = parts.System([1,2], [1,4], 20, 1)
+sys = parts.System([1,2], [1,4], 1000, 1)
 
 results = sys.run_simulation()
 
