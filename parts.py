@@ -9,27 +9,17 @@ def avg(list):
 
 
 
-class Client():
-
-	client_id = 100
-
-	def __init__(self, t0):
-		'''
-			t0: arrival time
-			tq: time it leaves the queue
-			ts: time it leaves the server and the system
-
-		'''
-		self.t0 = t0
-		self.tq = 0
-		self.ts = 0
-		self.id = self.__class__.client_id
-		self.__class__.client_id += 1
-		
-
-
-
 class System():
+	'''
+		System class
+		This is the main wrapper class
+
+		It has a set of parts that represents the different parts of a real system
+		It has also an aditional part that is called Muestra (Sample), that deals
+		with all the clients that leave the system and at the end of the simulation
+		gives the wq_mean and ws_mean values
+	'''
+
 
 	def __init__(self, arrive_distribution, serve_distribution, T, dt, debug_mode=False):
 		'''
@@ -54,8 +44,6 @@ class System():
 						'muestra':  Muestra(self)  
 					}
 
-
-
 	def get_server(self):
 		return self.parts['server']
 
@@ -75,9 +63,18 @@ class System():
 		self.ls.append(  self.get_queue().lq[-1] + self.get_server().cm[-1]  )
 	
 	def ls_mean(self):
+		'''
+			Calculate and return mean system length
+			This should be called after the last iteration
+		'''
 		return avg(  self.ls  )
 
 	def end_rutine(self):
+		'''
+			Calculate all the simulation system parameters and store them in results
+			Return results
+			This should be called after the last iteration
+		'''
 		self.results =  { 
 			'Lq_mean': self.get_queue().lq_mean(),
 			'Ls_mean': self.ls_mean(),			
@@ -89,15 +86,25 @@ class System():
 		return self.results
 
 	def run_simulation(self):
+		'''
+			Main starter method.
+			Use this to start the simulation after setting up the system
+		'''
 		self.main_loop()
 		return self.end_rutine()
 
 
 
 	def main_loop(self):
+		'''
+			System main main loop
+			Intentionaly deal with it from the input point of view
+			The order of the part.input(ti) for every part is intentional to provide 
+			coordination of the parts
 
-		for ti in range(  self.step_quantity  ):
-			
+			This order will not work with limited length queues
+		'''
+		for ti in range(  self.step_quantity  ):			
 			self.get_muestra().input(ti)
 			self.get_queue().input(ti)
 			self.get_server().input(ti)
@@ -114,14 +121,23 @@ class System():
 			
 
 	def debug(self, ti):
+		'''
+			Show the current iteration state of the queue, the server, and the
+			ending point part, muestra
+		'''
 		print(
-			ti,
-			"queue: ",[ c.id for c in self.get_queue().queue  ],
-			"server: ",[ c.id for c in self.get_server().client  ],
-			"muestra: ",[ c.id for c in self.get_muestra().element  ]
+				ti,
+				"queue: ",[ c.id for c in self.get_queue().queue  ],
+				"server: ",[ c.id for c in self.get_server().client  ],
+				"muestra: ",[ c.id for c in self.get_muestra().element  ]
 			)
 
 	def print_results(self):
+		'''
+			This method make it easier to show simulation results
+			You can custom the way the results are shown by using the result dictionary
+			and making a custom printing
+		'''
 		print('Simulation Results')
 		print('Lq_mean:', self.results['Lq_mean'])
 		print('Ls_mean:', self.results['Ls_mean'])
@@ -172,6 +188,14 @@ class Queue():
 
 class Random_wrapper():
 
+	def __init__(self, distribution, system, steps):
+		self.client = []
+		self.time = []
+		self.system = system
+
+		self.define_distribution(distribution)
+		self.define_time_list(steps)
+
 	def define_distribution(self, distribution):
 		'''
 			a, b, T: are time in seconds,  must be integers at all times
@@ -203,15 +227,6 @@ class Random_wrapper():
 
 class Source(Random_wrapper):
 
-
-	def __init__(self, distribution, system, steps):
-		self.client = []
-		self.time = []
-		self.system = system
-
-		self.define_distribution(distribution)
-		self.define_time_list(steps)
-
 	def is_client_ready(self, ti):
 		if ti == self.time[0]:
 			new_client = Client(ti)
@@ -228,21 +243,11 @@ class Source(Random_wrapper):
 
 
 			
-
-
 class Server(Random_wrapper):
 
 	def __init__(self, distribution, system, steps):
-		self.client = []
-		self.time = []
-		self.system = system
-
-		self.cm = []
-
-		self.define_distribution(distribution)
-		self.define_time_list(steps)
-		
-
+		super().__init__(distribution, system, steps)
+		self.cm = []	
 
 	def cm_mean(self):
 		return avg(self.cm)
@@ -275,8 +280,6 @@ class Server(Random_wrapper):
 
 
 
-
-
 class Muestra():
 
 	def __init__(self, system):
@@ -300,9 +303,21 @@ class Muestra():
 
 
 
+class Client():
 
+	client_id = 100
 
+	def __init__(self, t0):
+		'''
+			t0: arrival time
+			tq: time it leaves the queue
+			ts: time it leaves the server and the system
 
-
+		'''
+		self.t0 = t0
+		self.tq = 0
+		self.ts = 0
+		self.id = self.__class__.client_id
+		self.__class__.client_id += 1
 
 	
