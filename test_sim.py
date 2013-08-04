@@ -1,12 +1,12 @@
 
 import unittest
-import parts
+import sim
 
 
 
 class Client_Constructor(unittest.TestCase):
 	
-	c = parts.Client(0)
+	c = sim.Client(0)
 
 	def test_t0(self):
 		'''Client class should construct with t0 = the argument passed to the constructor'''
@@ -20,7 +20,7 @@ class Client_Constructor(unittest.TestCase):
 
 class Client_Getter_Setter(unittest.TestCase):
 
-	c = parts.Client(0)
+	c = sim.Client(0)
 	c.wq = 10
 	c.wc = 5
 
