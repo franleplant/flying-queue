@@ -39,10 +39,12 @@ results =  {
 ```
 
 * print_results() method will print the result (the same as above) in this shape
-```
+
+```python
 Lq_mean: lq_mean_value
-Ls_mean: ls_mean_value		
+Ls_mean: ls_mean_value
 Wq_mean: wq_mean_value
 Ws_mean: ws_mean_value
 Cm_mean: cm_mean_value
+
 ```
