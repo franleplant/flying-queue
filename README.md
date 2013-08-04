@@ -1,4 +1,4 @@
-# flying-queue
+flying-queue
 =======================
 
 ## Simple Simulation script
@@ -21,8 +21,8 @@ sys.print_results()
 
 where 
 
-* generator_dis = [__a__, __b__], where __a__ is the lower distribution limit and __b__ is the upper distribution limit
-* server_dis = [__a__, __b__], where __a__ is the lower distribution limit and __b__ is the upper distribution limit
+* generator_dis = [ __a__ , __b__ ], where __a__ is the lower distribution limit and __b__ is the upper distribution limit
+* server_dis = [ __a__ , __b__ ], where __a__ is the lower distribution limit and __b__ is the upper distribution limit
 * Total_simulation_time is a integer that represents the Total simulation time. It must be in seconds
 * time_slice represent the frames in which the Total_simulation_time is divided. It must be and integer
 
@@ -40,8 +40,8 @@ results =  {
 
 * print_results() method will print the result (the same as above) in this shape
 
-	Lq_mean: lq_mean_value
-	Ls_mean: ls_mean_value		
-	Wq_mean: wq_mean_value
-	Ws_mean: ws_mean_value
-	Cm_mean: cm_mean_value
+    Lq_mean: lq_mean_value
+    Ls_mean: ls_mean_value		
+    Wq_mean: wq_mean_value
+    Ws_mean: ws_mean_value
+    Cm_mean: cm_mean_value
