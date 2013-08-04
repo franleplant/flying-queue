@@ -31,18 +31,20 @@ class Client():
 
 class System():
 
-	def __init__(self, arrive_distribution, serve_distribution, T, dt):
+	def __init__(self, arrive_distribution, serve_distribution, T, dt, debug_mode=False):
 		'''
-			arrive_distribution: a dictionary containing uniform distribution limits, a & b
-			serve_distribution: a dictionary containing uniform distribution limits, a & b
+			arrive_distribution: a list containing uniform distribution limits, a & b
+			serve_distribution: a list containing uniform distribution limits, a & b
 			T: total simulation time in seconds
 			dt: delta of time, time step, in seconds
+			debug_mode: print the state of the parts in every iteration
 
 		'''
 		# System length
 		self.ls = []
 		self.T = T
 		self.dt = dt
+		self.debug_mode = debug_mode
 		# be sure it is an integer
 		self.step_quantity = round(  self.T / self.dt  )
 		self.parts = {  
@@ -67,19 +69,24 @@ class System():
 		return self.parts['muestra']
 
 	def calc_parameters(self):
+		'''
+			Calculate current iteration system length
+		'''
 		self.ls.append(  self.get_queue().lq[-1] + self.get_server().cm[-1]  )
 	
 	def ls_mean(self):
 		return avg(  self.ls  )
 
 	def end_rutine(self):
-		return { 
+		self.results =  { 
 			'Lq_mean': self.get_queue().lq_mean(),
 			'Ls_mean': self.ls_mean(),			
 			'Wq_mean': self.get_muestra().wq_mean(), 
 			'Ws_mean': self.get_muestra().ws_mean(),
 			'Cm_mean': self.get_server().cm_mean()
 			}
+
+		return self.results
 
 	def run_simulation(self):
 		self.main_loop()
@@ -100,10 +107,13 @@ class System():
 			self.get_server().calc_parameters()
 			self.calc_parameters()
 
+			if self.debug_mode :
+				self.debug(ti)
+
 
 			
 
-	def debug_on(self):
+	def debug(self, ti):
 		print(
 			ti,
 			"queue: ",[ c.id for c in self.get_queue().queue  ],
@@ -111,6 +121,13 @@ class System():
 			"muestra: ",[ c.id for c in self.get_muestra().element  ]
 			)
 
+	def print_results(self):
+		print('Simulation Results')
+		print('Lq_mean:', self.results['Lq_mean'])
+		print('Ls_mean:', self.results['Ls_mean'])
+		print('Wq_mean:', self.results['Wq_mean'])
+		print('Ws_mean:', self.results['Ws_mean'])
+		print('Cm_mean:', self.results['Cm_mean'])
 
 
 
